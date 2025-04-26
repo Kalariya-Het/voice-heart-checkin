@@ -1,12 +1,265 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React, { useState, useEffect, useCallback } from 'react';
+import VoiceButton from '@/components/VoiceButton';
+import VoiceWaveVisualizer from '@/components/VoiceWaveVisualizer';
+import ResponseBubble from '@/components/ResponseBubble';
+import EmotionBubble, { EmotionType } from '@/components/EmotionBubble';
+import useSpeechRecognition from '@/hooks/useSpeechRecognition';
+import useSpeechSynthesis from '@/hooks/useSpeechSynthesis';
+import useAudioAnalyzer from '@/hooks/useAudioAnalyzer';
+import useWakeWordDetection from '@/hooks/useWakeWordDetection';
+import useEmotionDetection from '@/hooks/useEmotionDetection';
+import ConversationManager, { ConversationStage, ConversationState } from '@/services/conversationManager';
+import { toast } from '@/components/ui/use-toast';
+
+const WAKE_WORD = 'hey mindmosaic';
 
 const Index = () => {
+  // State for UI
+  const [currentResponse, setCurrentResponse] = useState<string>('');
+  const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [userText, setUserText] = useState<string>('');
+  const [listeningForWakeWord, setListeningForWakeWord] = useState<boolean>(true);
+  
+  // Conversation state
+  const [conversationState, setConversationState] = useState<ConversationState>({
+    stage: 'idle',
+    userResponses: [],
+    currentQuestion: '',
+  });
+
+  // Voice hooks
+  const {
+    transcript,
+    isListening,
+    startListening,
+    stopListening,
+    resetTranscript,
+    hasRecognitionSupport
+  } = useSpeechRecognition({
+    onResult: (text, isFinal) => {
+      if (isFinal) {
+        setUserText(text);
+      }
+    }
+  });
+
+  const {
+    speak,
+    stop: stopSpeaking,
+    isSpeaking,
+    hasSynthesisSupport
+  } = useSpeechSynthesis();
+
+  const {
+    audioLevel,
+    audioPattern,
+    isAnalyzing,
+    startAnalyzing,
+    stopAnalyzing
+  } = useAudioAnalyzer();
+
+  // Wake word detection
+  const { isActivated, reset: resetWakeWord } = useWakeWordDetection({
+    wakeWord: WAKE_WORD,
+    transcript,
+    isListening: listeningForWakeWord && isListening,
+    onDetected: () => handleWakeWordDetected()
+  });
+
+  // Emotion detection
+  const { emotion, confidence } = useEmotionDetection({
+    text: userText,
+    voicePattern: audioPattern
+  });
+
+  // Handle wake word detection
+  const handleWakeWordDetected = useCallback(() => {
+    toast({
+      title: "MindMosaic Activated",
+      description: "I'm listening...",
+      duration: 2000
+    });
+    
+    resetTranscript();
+    setConversationState(prevState => 
+      ConversationManager.getNextState({ ...prevState, stage: 'idle' })
+    );
+  }, [resetTranscript]);
+
+  // Toggle listening
+  const toggleListening = useCallback(() => {
+    if (isListening) {
+      stopListening();
+      stopAnalyzing();
+    } else {
+      startListening();
+      startAnalyzing();
+    }
+  }, [isListening, startListening, stopListening, startAnalyzing, stopAnalyzing]);
+
+  // Process user input and advance conversation
+  useEffect(() => {
+    if (!userText || conversationState.stage === 'idle' || isTyping) return;
+    
+    // Special case for closing the conversation
+    if (conversationState.stage === 'closing') {
+      const timeoutId = setTimeout(() => {
+        setConversationState({
+          stage: 'idle',
+          userResponses: [],
+          currentQuestion: '',
+        });
+        setListeningForWakeWord(true);
+        setUserText('');
+        resetTranscript();
+        resetWakeWord();
+      }, 3000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+    
+    // Process this user input in the current conversation
+    const nextState = ConversationManager.getNextState(
+      conversationState, 
+      userText,
+      conversationState.stage === 'listening' ? emotion : conversationState.detectedEmotion
+    );
+    
+    // Update state with the new conversation state
+    setConversationState(nextState);
+    setUserText('');
+    resetTranscript();
+  }, [userText, conversationState, isTyping, resetTranscript, emotion, resetWakeWord]);
+
+  // Speak response when conversation state changes
+  useEffect(() => {
+    const question = conversationState.currentQuestion;
+    if (question && hasSynthesisSupport) {
+      setIsTyping(true);
+      setCurrentResponse(question);
+      speak(question);
+    }
+  }, [conversationState, hasSynthesisSupport, speak]);
+
+  // Check for browser compatibility
+  useEffect(() => {
+    if (!hasRecognitionSupport) {
+      toast({
+        variant: "destructive",
+        title: "Browser not supported",
+        description: "Your browser doesn't support speech recognition. Please try Chrome, Edge, or Safari.",
+        duration: 5000
+      });
+    }
+    
+    if (!hasSynthesisSupport) {
+      toast({
+        variant: "destructive",
+        title: "Browser not supported",
+        description: "Your browser doesn't support speech synthesis. Please try Chrome, Edge, or Safari.",
+        duration: 5000
+      });
+    }
+    
+    // Start listening for wake word on mount
+    if (hasRecognitionSupport) {
+      startListening();
+      startAnalyzing();
+    }
+    
+    return () => {
+      stopListening();
+      stopAnalyzing();
+      stopSpeaking();
+    };
+  }, [hasRecognitionSupport, hasSynthesisSupport, startListening, stopListening, startAnalyzing, stopAnalyzing, stopSpeaking]);
+
+  // Update UI based on conversation stage
+  useEffect(() => {
+    if (isActivated && listeningForWakeWord) {
+      setListeningForWakeWord(false);
+    }
+  }, [isActivated, listeningForWakeWord]);
+
+  // Handle typing animation completion
+  const handleFinishTyping = useCallback(() => {
+    setIsTyping(false);
+  }, []);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-between py-6 px-4 bg-gradient-to-br from-background to-muted">
+      {/* Header */}
+      <header className="w-full max-w-md text-center mb-4">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          MindMosaic
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {listeningForWakeWord ? "Say \"Hey MindMosaic\" to begin" : 
+          conversationState.stage !== 'idle' ? "I'm listening..." : 
+          "Tap the microphone to start"}
+        </p>
+      </header>
+      
+      {/* Main Conversation Area */}
+      <main className="flex-1 w-full max-w-md flex flex-col items-center justify-center space-y-8">
+        {/* Emotion Bubble */}
+        {conversationState.detectedEmotion && conversationState.stage !== 'idle' && (
+          <div className="flex flex-col items-center">
+            <EmotionBubble 
+              emotion={conversationState.detectedEmotion} 
+              confidence={confidence}
+              size="lg"
+              className="animate-float mb-2"
+            />
+            <p className="text-sm text-muted-foreground">
+              {conversationState.detectedEmotion.charAt(0).toUpperCase() + conversationState.detectedEmotion.slice(1)}
+            </p>
+          </div>
+        )}
+        
+        {/* Response Bubble */}
+        {currentResponse && (
+          <ResponseBubble
+            message={currentResponse}
+            isTyping={isTyping}
+            onFinishTyping={handleFinishTyping}
+            className="animate-fade-in"
+          />
+        )}
+        
+        {/* Voice Visualization */}
+        <div className="relative my-4">
+          <VoiceWaveVisualizer
+            isListening={isListening && !listeningForWakeWord}
+            audioLevel={audioLevel}
+          />
+          {transcript && !listeningForWakeWord && (
+            <p className="text-center text-sm mt-2 text-muted-foreground max-w-xs">
+              "{transcript}"
+            </p>
+          )}
+        </div>
+      </main>
+      
+      {/* Controls */}
+      <footer className="w-full max-w-md flex flex-col items-center space-y-4">
+        <VoiceButton
+          isListening={isListening}
+          onClick={toggleListening}
+        />
+        <p className="text-xs text-muted-foreground">
+          {isListening ? "Tap to pause" : "Tap to resume"}
+        </p>
+      </footer>
+      
+      {/* Wake Word Indicator (hidden unless searching for wake word) */}
+      {listeningForWakeWord && isListening && (
+        <div className="fixed bottom-4 right-4 flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs">
+          <div className="w-2 h-2 rounded-full bg-primary mr-2 animate-pulse"></div>
+          Listening for wake word
+        </div>
+      )}
     </div>
   );
 };
