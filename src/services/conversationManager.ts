@@ -1,5 +1,6 @@
 
 import { EmotionType } from '@/components/EmotionBubble';
+import ContentRecommendationsService from './contentRecommendationsService';
 
 // Types for our conversation
 export type ConversationStage = 
@@ -10,6 +11,7 @@ export type ConversationStage =
   | 'analyzing'
   | 'follow_up'
   | 'confirming_emotion'
+  | 'recommendation'
   | 'closing';
 
 export type ConversationState = {
@@ -128,6 +130,40 @@ const greetings = [
   "Hi! It's good to connect with you. How are you feeling today?"
 ];
 
+// Recommendation transition questions
+const recommendationTransitions: Record<EmotionType, string[]> = {
+  neutral: [
+    "Would you like me to suggest something that might enhance your day?",
+    "I have some recommendations that might be interesting. Would you like to hear them?",
+    "Would you like to hear some content suggestions that might resonate with you right now?"
+  ],
+  happy: [
+    "I have some upbeat recommendations to keep this positive energy going. Would you like to hear them?",
+    "Would you like me to suggest some content that matches your joyful mood?",
+    "I can recommend something to complement your happy state. Interested?"
+  ],
+  sad: [
+    "I have some gentle suggestions that might provide comfort. Would you like to hear them?",
+    "Some people find certain content soothing when they're feeling down. Would you like some recommendations?",
+    "Would you like to hear some recommendations that might help lift your spirits a bit?"
+  ],
+  stressed: [
+    "I sensed today's been a lot. I've got something that might help... want a calming playlist, a light-hearted podcast, or a short mindful reset?",
+    "When stress is high, sometimes the right audio can help. Would you like some recommendations?",
+    "I have some content suggestions that might help ease your stress. Would you like to hear them?"
+  ],
+  calm: [
+    "To complement your peaceful state, would you like some content recommendations?",
+    "I have some suggestions that might enhance your calm mood. Would you like to hear them?",
+    "Would you be interested in some content recommendations that align with your tranquil state?"
+  ],
+  excited: [
+    "I have some energizing recommendations that match your enthusiasm. Would you like to hear them?",
+    "With that exciting energy, would you like some content suggestions to channel it?",
+    "Would you like to hear some recommendations that complement your excitement?"
+  ]
+};
+
 class ConversationManager {
   // Get a greeting message
   static getGreeting(): string {
@@ -152,6 +188,18 @@ class ConversationManager {
     const questions = followUpQuestions[emotion] || followUpQuestions.neutral;
     const randomIndex = Math.floor(Math.random() * questions.length);
     return questions[randomIndex];
+  }
+  
+  // Get a recommendation transition question
+  static getRecommendationTransition(emotion: EmotionType): string {
+    const transitions = recommendationTransitions[emotion] || recommendationTransitions.neutral;
+    const randomIndex = Math.floor(Math.random() * transitions.length);
+    return transitions[randomIndex];
+  }
+  
+  // Get a content recommendation response
+  static getRecommendationResponse(emotion: EmotionType): string {
+    return ContentRecommendationsService.generateRecommendationResponse(emotion);
   }
   
   // Get a confirmation question
@@ -218,9 +266,9 @@ class ConversationManager {
         
         if (isAffirmative) {
           return {
-            stage: 'follow_up',
+            stage: 'recommendation',
             userResponses,
-            currentQuestion: this.getFollowUpQuestion(detectedEmotion || 'neutral'),
+            currentQuestion: this.getRecommendationTransition(detectedEmotion || 'neutral'),
             detectedEmotion
           };
         } else {
@@ -235,11 +283,31 @@ class ConversationManager {
         
       case 'follow_up':
         return {
-          stage: 'closing',
+          stage: 'recommendation',
           userResponses,
-          currentQuestion: "Thank you for sharing with me today. Is there anything else on your mind before we finish our check-in?",
+          currentQuestion: this.getRecommendationTransition(detectedEmotion || 'neutral'),
           detectedEmotion
         };
+        
+      case 'recommendation':
+        // Check if user wants recommendations
+        const wantsRecommendations = /\b(yes|yeah|yep|sure|ok|okay|please|recommend|suggestions?)\b/i.test(userInput || '');
+        
+        if (wantsRecommendations) {
+          return {
+            stage: 'closing',
+            userResponses,
+            currentQuestion: this.getRecommendationResponse(detectedEmotion || 'neutral'),
+            detectedEmotion
+          };
+        } else {
+          return {
+            stage: 'closing',
+            userResponses,
+            currentQuestion: "Thank you for sharing with me today. Is there anything else on your mind before we finish our check-in?",
+            detectedEmotion
+          };
+        }
         
       case 'closing':
       default:

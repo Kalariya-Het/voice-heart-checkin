@@ -5,65 +5,48 @@
 
 @layer base {
   :root {
-    --background: 220 70% 98%;
-    --foreground: 222 47% 11%;
-
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
-    --primary: 240 60% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 260 60% 60%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 240 10% 94%;
-    --muted-foreground: 240 4% 46%;
-
-    --accent: 190 80% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 20% 90%;
-    --input: 220 20% 90%;
-    --ring: 240 60% 50%;
-
-    --radius: 1rem;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
   }
 
   .dark {
-    --background: 240 30% 5%;
-    --foreground: 210 40% 98%;
-
-    --card: 240 25% 10%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 240 25% 10%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 240 60% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 260 60% 55%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 240 20% 20%;
-    --muted-foreground: 240 10% 70%;
-
-    --accent: 190 80% 40%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 240 20% 20%;
-    --input: 240 20% 20%;
-    --ring: 240 60% 60%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
   }
 }
 
@@ -71,40 +54,77 @@
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-@keyframes pulse-subtle {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.8;
+@layer utilities {
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
   }
-  50% {
-    transform: scale(1.05);
-    opacity: 1;
+
+  .animate-pulse-animation {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
+  }
+
+  .pulse-animation {
+    animation: pulse 1.5s infinite;
   }
 }
 
-@keyframes wave {
+@keyframes float {
   0% {
-    transform: translateY(0);
+    transform: translateY(0px);
   }
   50% {
     transform: translateY(-10px);
   }
   100% {
-    transform: translateY(0);
+    transform: translateY(0px);
   }
 }
 
-.wave-animation {
-  animation: wave 2s ease-in-out infinite;
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-.pulse-animation {
-  animation: pulse-subtle 2s ease-in-out infinite;
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

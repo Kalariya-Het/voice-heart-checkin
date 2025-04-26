@@ -4,12 +4,15 @@ import VoiceButton from '@/components/VoiceButton';
 import VoiceWaveVisualizer from '@/components/VoiceWaveVisualizer';
 import ResponseBubble from '@/components/ResponseBubble';
 import EmotionBubble, { EmotionType } from '@/components/EmotionBubble';
+import RecommendationList from '@/components/RecommendationList';
+import ContentPlayer from '@/components/ContentPlayer';
 import useSpeechRecognition from '@/hooks/useSpeechRecognition';
 import useSpeechSynthesis from '@/hooks/useSpeechSynthesis';
 import useAudioAnalyzer from '@/hooks/useAudioAnalyzer';
 import useWakeWordDetection from '@/hooks/useWakeWordDetection';
 import useEmotionDetection from '@/hooks/useEmotionDetection';
 import ConversationManager, { ConversationStage, ConversationState } from '@/services/conversationManager';
+import ContentRecommendationsService, { ContentItem } from '@/services/contentRecommendationsService';
 import { toast } from '@/components/ui/use-toast';
 
 const WAKE_WORD = 'hey mindmosaic';
@@ -20,6 +23,12 @@ const Index = () => {
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [userText, setUserText] = useState<string>('');
   const [listeningForWakeWord, setListeningForWakeWord] = useState<boolean>(true);
+  
+  // Content player state
+  const [recommendations, setRecommendations] = useState<ContentItem[]>([]);
+  const [currentContent, setCurrentContent] = useState<ContentItem | null>(null);
+  const [isContentPlaying, setIsContentPlaying] = useState<boolean>(false);
+  const [showRecommendations, setShowRecommendations] = useState<boolean>(false);
   
   // Conversation state
   const [conversationState, setConversationState] = useState<ConversationState>({
@@ -132,6 +141,23 @@ const Index = () => {
     resetTranscript();
   }, [userText, conversationState, isTyping, resetTranscript, emotion, resetWakeWord]);
 
+  // Handle content recommendations
+  useEffect(() => {
+    if (conversationState.stage === 'recommendation' || conversationState.stage === 'closing') {
+      if (conversationState.detectedEmotion) {
+        const newRecommendations = ContentRecommendationsService.getRecommendations(conversationState.detectedEmotion);
+        setRecommendations(newRecommendations);
+        
+        // Show recommendations after explanation is complete
+        if (conversationState.stage === 'closing') {
+          setShowRecommendations(true);
+        }
+      }
+    } else {
+      setShowRecommendations(false);
+    }
+  }, [conversationState]);
+
   // Speak response when conversation state changes
   useEffect(() => {
     const question = conversationState.currentQuestion;
@@ -187,8 +213,31 @@ const Index = () => {
     setIsTyping(false);
   }, []);
 
+  // Handle playing content
+  const handlePlayContent = useCallback((content: ContentItem) => {
+    if (currentContent?.id === content.id) {
+      // Toggle play/pause for current content
+      setIsContentPlaying(!isContentPlaying);
+    } else {
+      // Start playing new content
+      setCurrentContent(content);
+      setIsContentPlaying(true);
+      
+      toast({
+        title: `Playing ${content.category}`,
+        description: content.title,
+        duration: 3000
+      });
+    }
+  }, [currentContent, isContentPlaying]);
+
+  // Handle stopping content playback
+  const handleStopContent = useCallback(() => {
+    setIsContentPlaying(false);
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between py-6 px-4 bg-gradient-to-br from-background to-muted">
+    <div className="min-h-screen flex flex-col items-center justify-between py-6 px-4 bg-gradient-to-br from-background to-muted pb-24">
       {/* Header */}
       <header className="w-full max-w-md text-center mb-4">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -228,6 +277,18 @@ const Index = () => {
           />
         )}
         
+        {/* Recommendations */}
+        {showRecommendations && recommendations.length > 0 && (
+          <div className="w-full mt-6 animate-fade-in-up">
+            <h2 className="text-lg font-medium mb-3">Recommendations for you</h2>
+            <RecommendationList
+              items={recommendations}
+              onPlay={handlePlayContent}
+              playingItem={currentContent}
+            />
+          </div>
+        )}
+        
         {/* Voice Visualization */}
         <div className="relative my-4">
           <VoiceWaveVisualizer
@@ -252,6 +313,16 @@ const Index = () => {
           {isListening ? "Tap to pause" : "Tap to resume"}
         </p>
       </footer>
+      
+      {/* Content Player */}
+      {currentContent && (
+        <ContentPlayer
+          content={currentContent}
+          isPlaying={isContentPlaying}
+          onPlayPause={() => setIsContentPlaying(!isContentPlaying)}
+          onClose={() => setCurrentContent(null)}
+        />
+      )}
       
       {/* Wake Word Indicator (hidden unless searching for wake word) */}
       {listeningForWakeWord && isListening && (
