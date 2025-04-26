@@ -33,10 +33,12 @@ const useSpeechRecognition = ({
   // Initialize speech recognition
   useEffect(() => {
     // Check if browser supports speech recognition
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    // Use type assertion to tell TypeScript these properties exist
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || 
+                                 (window as any).webkitSpeechRecognition;
     
-    if (SpeechRecognition) {
-      const recognitionInstance = new SpeechRecognition();
+    if (SpeechRecognitionAPI) {
+      const recognitionInstance = new SpeechRecognitionAPI();
       recognitionInstance.continuous = true;
       recognitionInstance.interimResults = true;
       recognitionInstance.lang = language;
