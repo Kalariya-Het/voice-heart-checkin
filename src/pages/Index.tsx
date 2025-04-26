@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import VoiceButton from '@/components/VoiceButton';
 import VoiceWaveVisualizer from '@/components/VoiceWaveVisualizer';
@@ -14,10 +13,17 @@ import useEmotionDetection from '@/hooks/useEmotionDetection';
 import ConversationManager, { ConversationStage, ConversationState } from '@/services/conversationManager';
 import ContentRecommendationsService, { ContentItem } from '@/services/contentRecommendationsService';
 import { toast } from '@/components/ui/use-toast';
+import { withBrowserCompatibility } from "@/components/hoc/withBrowserCompatibility";
+import { cn } from '@/utils/cn';
 
 const WAKE_WORD = 'hey mindmosaic';
 
-const Index = () => {
+interface IndexProps {
+  hasRecognitionSupport: boolean;
+  hasSynthesisSupport: boolean;
+}
+
+const Index: React.FC<IndexProps> = ({ hasRecognitionSupport, hasSynthesisSupport }) => {
   // State for UI
   const [currentResponse, setCurrentResponse] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
@@ -289,27 +295,31 @@ const Index = () => {
           </div>
         )}
         
-        {/* Voice Visualization */}
+        {/* Voice Visualization with enhanced animation */}
         <div className="relative my-4">
           <VoiceWaveVisualizer
             isListening={isListening && !listeningForWakeWord}
             audioLevel={audioLevel}
+            className={cn(
+              "transition-opacity duration-300",
+              isListening ? "opacity-100" : "opacity-50"
+            )}
           />
           {transcript && !listeningForWakeWord && (
-            <p className="text-center text-sm mt-2 text-muted-foreground max-w-xs">
+            <p className="text-center text-sm mt-2 text-muted-foreground max-w-xs animate-fade-in">
               "{transcript}"
             </p>
           )}
         </div>
       </main>
       
-      {/* Controls */}
+      {/* Controls with enhanced button */}
       <footer className="w-full max-w-md flex flex-col items-center space-y-4">
         <VoiceButton
           isListening={isListening}
           onClick={toggleListening}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground animate-fade-in">
           {isListening ? "Tap to pause" : "Tap to resume"}
         </p>
       </footer>
@@ -335,4 +345,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default withBrowserCompatibility(Index);
