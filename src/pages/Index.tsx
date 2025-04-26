@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import VoiceButton from '@/components/VoiceButton';
 import VoiceWaveVisualizer from '@/components/VoiceWaveVisualizer';
@@ -14,7 +15,7 @@ import ConversationManager, { ConversationStage, ConversationState } from '@/ser
 import ContentRecommendationsService, { ContentItem } from '@/services/contentRecommendationsService';
 import { toast } from '@/components/ui/use-toast';
 import { withBrowserCompatibility } from "@/components/hoc/withBrowserCompatibility";
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';  // Fixed import path
 
 const WAKE_WORD = 'hey mindmosaic';
 
@@ -50,7 +51,7 @@ const Index: React.FC<IndexProps> = ({ hasRecognitionSupport, hasSynthesisSuppor
     startListening,
     stopListening,
     resetTranscript,
-    hasRecognitionSupport
+    // Remove duplicate property that's already passed in props
   } = useSpeechRecognition({
     onResult: (text, isFinal) => {
       if (isFinal) {
@@ -63,7 +64,7 @@ const Index: React.FC<IndexProps> = ({ hasRecognitionSupport, hasSynthesisSuppor
     speak,
     stop: stopSpeaking,
     isSpeaking,
-    hasSynthesisSupport
+    // Remove duplicate property that's already passed in props
   } = useSpeechSynthesis();
 
   const {

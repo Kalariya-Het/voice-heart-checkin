@@ -15,7 +15,12 @@ export const withBrowserCompatibility = <P extends BrowserCompatibilityProps>(
 
     React.useEffect(() => {
       if (!checkedBrowser) {
-        const hasRecognition = !!(window.SpeechRecognition || (window as any).webkitSpeechRecognition);
+        // Use type assertion to tell TypeScript these properties exist
+        const SpeechRecognitionAPI = 
+          (window as any).SpeechRecognition || 
+          (window as any).webkitSpeechRecognition;
+          
+        const hasRecognition = !!SpeechRecognitionAPI;
         const hasSynthesis = 'speechSynthesis' in window;
 
         if (!hasRecognition || !hasSynthesis) {
@@ -33,7 +38,10 @@ export const withBrowserCompatibility = <P extends BrowserCompatibilityProps>(
     return (
       <WrappedComponent
         {...(props as P)}
-        hasRecognitionSupport={!!(window.SpeechRecognition || (window as any).webkitSpeechRecognition)}
+        hasRecognitionSupport={!!(
+          (window as any).SpeechRecognition || 
+          (window as any).webkitSpeechRecognition
+        )}
         hasSynthesisSupport={'speechSynthesis' in window}
       />
     );
