@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Mic, MicOff } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 interface VoiceButtonProps {
   isListening: boolean;
@@ -15,9 +16,20 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
   onClick,
   className,
 }) => {
+  const handleClick = () => {
+    onClick();
+    toast({
+      title: isListening ? "Microphone off" : "Microphone on",
+      description: isListening 
+        ? "Voice recording stopped" 
+        : "I'm listening... Say 'Hey MindMosaic' to begin",
+      duration: 2000,
+    });
+  };
+
   return (
     <Button
-      onClick={onClick}
+      onClick={handleClick}
       variant={isListening ? "default" : "outline"}
       size="lg"
       className={cn(
